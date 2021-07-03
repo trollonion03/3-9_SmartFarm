@@ -14,18 +14,17 @@
 #include <Wire.h>
 #include <WiFiUdp.h>
 #include <LiquidCrystal_I2C.h>
+#include <ThreeWire.h>  
+#include <RtcDS1302.h>
 
 
 //network setup
+/*
 int status = WL_IDLE_STATUS;
 char ssid[] = "test";
 char pass[] = "test";
 int keyIndex = 0; 
-unsigned int localPort = 2390;
-IPAddress timeServer(129, 6, 15, 28); // time.nist.gov NTP server
-const int NTP_PACKET_SIZE = 48; // NTP timestamp is in the first 48 bytes of the message
-byte packetBuffer[ NTP_PACKET_SIZE]; //buffer to hold incoming and outgoing packets
-WiFiUDP Udp;
+*/
 
 //var
 int high1 = 0;
@@ -34,9 +33,17 @@ int high3 = 0;
 int soilval1 = 0;
 int soilval2 = 0;
 int soilval3 = 0;
+int lortcdate = 0;
+int lortchour = 0;
+int lortcmin = 0;
+int lortcsec = 0;
 float hum = 0;
 float temp = 0;
 
+//rtc
+ThreeWire myWire(7,8,9); // IO, SCLK, CE
+RtcDS1302<ThreeWire> Rtc(myWire);
+#define countof(a) (sizeof(a) / sizeof(a[0]))
 
 //soil
 #define A0Pin 0
@@ -59,32 +66,7 @@ void setup() {
   pinMode(6, OUTPUT);
   
   //netowork setup
-  if (WiFi.status() == WL_NO_MODULE) {
-    Serial.println("Communication with WiFi module failed!");
-    // don't continue
-    while (true);
-  }
   
-  String fv = WiFi.firmwareVersion();
-  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
-    Serial.println("Please upgrade the firmware");
-  }
-
-  // attempt to connect to WiFi network:
-  while (status != WL_CONNECTED) {
-    Serial.print("Attempting to connect to SSID: ");
-    Serial.println(ssid);
-    // Connect to WPA/WPA2 network. Change this line if using open or WEP network:
-    status = WiFi.begin(ssid, pass);
-
-    // wait 10 seconds for connection:
-    delay(10000);
-  }
-  Serial.println("Connected to WiFi");
-  printWifiStatus();
-
-  Serial.println("\nStarting connection to server...");
-  Udp.begin(localPort);
  
   //LCD
   lcd.init();
@@ -97,116 +79,77 @@ void setup() {
   //dht
   dht.begin();
 
+  //rtc
+  Rtc.Begin();
+
+  RtcDateTime compiled = RtcDateTime(__DATE__, __TIME__);
+  printDateTime(compiled);
+  Serial.println();
+
+  if (!Rtc.IsDateTimeValid()) { 
+    Rtc.SetDateTime(compiled);
+  }
+
+  if (Rtc.GetIsWriteProtected()) {
+    Rtc.SetIsWriteProtected(false);
+  }
+
+  if (!Rtc.GetIsRunning()) {
+    Rtc.SetIsRunning(true);
+  }
+
+  RtcDateTime now = Rtc.GetDateTime();
+  if (now < compiled) {
+    Rtc.SetDateTime(compiled);
+  }
+    
 }
 
 void loop() {
-  wifi11();
   waterpump();
   soil();
   lcds();
   dhts();
-  //wifi
-  sendNTPpacket(timeServer); // send an NTP packet to a time server
-  // wait to see if a reply is available
-  delay(1000);
-  if (Udp.parsePacket()) {
-    Serial.println("packet received");
-    
-    Udp.read(packetBuffer, NTP_PACKET_SIZE); // read the packet into the buffer
-
-    unsigned long highWord = word(packetBuffer[40], packetBuffer[41]);
-    unsigned long lowWord = word(packetBuffer[42], packetBuffer[43]);
-    // combine the four bytes (two words) into a long integer
-    // this is NTP time (seconds since Jan 1 1900):
-    unsigned long secsSince1900 = highWord << 16 | lowWord;
-    Serial.print("Seconds since Jan 1 1900 = ");
-    Serial.println(secsSince1900);
-
-    // now convert NTP time into everyday time:
-    Serial.print("Unix time = ");
-    // Unix time starts on Jan 1 1970. In seconds, that's 2208988800:
-    const unsigned long seventyYears = 2208988800UL;
-    // subtract seventy years:
-    unsigned long epoch = secsSince1900 - seventyYears;
-    // print Unix time:
-    Serial.println(epoch);
-
-
-    // print the hour, minute and second:
-    Serial.print("The UTC time is ");       // UTC is the time at Greenwich Meridian (GMT)
-    Serial.print((epoch  % 86400L) / 3600 + 9); // print the hour (86400 equals secs per day)
-    Serial.print(':');
-    if (((epoch % 3600) / 60) < 10) {
-      // In the first 10 minutes of each hour, we'll want a leading '0'
-      Serial.print('0');
-    }
-    Serial.print((epoch  % 3600) / 60); // print the minute (3600 equals secs per minute)
-    Serial.print(':');
-    if ((epoch % 60) < 10) {
-      // In the first 10 seconds of each minute, we'll want a leading '0'
-      Serial.print('0');
-    }
-    Serial.println(epoch % 60); // print the second
-  }
-  // wait ten seconds before asking for the time again
-  delay(10000);
-  
+  lortcs(); 
 }
 
 //네트워크
-unsigned long sendNTPpacket(IPAddress& address) {
-  //Serial.println("1");
-  // set all bytes in the buffer to 0
-  memset(packetBuffer, 0, NTP_PACKET_SIZE);
-  // Initialize values needed to form NTP request
-  // (see URL above for details on the packets)
-  //Serial.println("2");
-  packetBuffer[0] = 0b11100011;   // LI, Version, Mode
-  packetBuffer[1] = 0;     // Stratum, or type of clock
-  packetBuffer[2] = 6;     // Polling Interval
-  packetBuffer[3] = 0xEC;  // Peer Clock Precision
-  // 8 bytes of zero for Root Delay & Root Dispersion
-  packetBuffer[12]  = 49;
-  packetBuffer[13]  = 0x4E;
-  packetBuffer[14]  = 49;
-  packetBuffer[15]  = 52;
-
-  //Serial.println("3");
-
-  // all NTP fields have been given values, now
-  // you can send a packet requesting a timestamp:
-  Udp.beginPacket(address, 123); //NTP requests are to port 123
-  //Serial.println("4");
-  Udp.write(packetBuffer, NTP_PACKET_SIZE);
-  //Serial.println("5");
-  Udp.endPacket();
-  //Serial.println("6");
-}
-
-
-void printWifiStatus() {
-  // print the SSID of the network you're attached to:
-  Serial.print("SSID: ");
-  Serial.println(WiFi.SSID());
-
-  // print your board's IP address:
-  IPAddress ip = WiFi.localIP();
-  Serial.print("IP Address: ");
-  Serial.println(ip);
-
-  // print the received signal strength:
-  long rssi = WiFi.RSSI();
-  Serial.print("signal strength (RSSI):");
-  Serial.print(rssi);
-  Serial.println(" dBm");
-}
-
-void wifi11() {
-  
-  
-}
 
 //RTC
+void lortcs() {
+  RtcDateTime now = Rtc.GetDateTime();
+
+  printDateTime(now);
+  Serial.println();
+  
+  if (!now.IsValid()) {
+      // Common Causes:
+      //    1) the battery on the device is low or even missing and the power line was disconnected
+      Serial.println("RTC lost confidence in the DateTime!");
+  }
+  delay(10000); // ten seconds
+}
+
+void printDateTime(const RtcDateTime& dt)
+{
+  char datestring[20];
+
+  snprintf_P(datestring, 
+          countof(datestring),
+          PSTR("%02u/%02u/%04u %02u:%02u:%02u"),
+          dt.Month(),
+          dt.Day(),
+          dt.Year(),
+          dt.Hour(),
+          dt.Minute(),
+          dt.Second() );
+  Serial.print(datestring);
+  lortcdate = dt.Day();
+  lortchour = dt.Hour();
+  lortcmin = dt.Minute();
+  lortcsec = dt.Second();
+}
+
 
 
 //펌프모터
