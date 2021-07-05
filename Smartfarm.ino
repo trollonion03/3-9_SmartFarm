@@ -1,12 +1,12 @@
-/********************Eunhasu smartfarm(v1)***************************
- * Programmed by Trollonion03(https://github.com/trollonion03)
- * based on Arduino UNO wifi rev2
- * DHT-22 - D2
- * L298 - D3,4,5,6
- * RTC - D7,8,9
- * Soil Moisture Sensor - A0,1,2
- * OLED/LCD - A4,5
- * etc - D10,11,12
+/********************Eunhasu smartfarm(v1.1)************************
+ * Programmed by Trollonion03(https://github.com/trollonion03)     *
+ * based on Arduino UNO wifi rev2                                  *
+ * DHT-22 - D2                                                     *
+ * L298 - D3,4,5,6                                                 *
+ * RTC - D7,8,9                                                    *
+ * Soil Moisture Sensor - A0,1,2                                   *
+ * OLED/LCD - A4,5                                                 *
+ * etc - D10,11,12                                                 *
  *******************************************************************/
 #include <DHT.h>//D3
 #include <SPI.h>
@@ -39,6 +39,9 @@ int lortcmin = 0;
 int lortcsec = 0;
 float hum = 0;
 float temp = 0;
+int date1 = 0;
+int date2 = 0;
+int date3 = 0;
 
 //rtc
 ThreeWire myWire(7,8,9); // IO, SCLK, CE
@@ -110,7 +113,8 @@ void loop() {
   soil();
   lcds();
   dhts();
-  lortcs(); 
+  lortcs();
+  calucatedate(); 
 }
 
 //네트워크
@@ -150,7 +154,43 @@ void printDateTime(const RtcDateTime& dt)
   lortcsec = dt.Second();
 }
 
+void calucatedate() {
+  int loc1 = 0;
+  int locc1 = 0;
+  int loc2 = 0;
+  int locc2 = 0;
+  int loc3 = 0;
+  int locc3 = 0;
+  int val1 = 0;
+  int val2 = 0;
+  int val3 = 0;
+  
+  if(val1 == 0) {
+   loc1 = lortcdate + 4;
+   val1 = 1; 
+  }
+  else if(val2 == 0) {
+   loc2 = lortcdate + 4;
+   val2 = 1;
+  }
+  else if(val3 == 0) {
+    loc3 = lortcdate + 4;
+    val3 = 1;
+  }
 
+  if(loc1 == lortcdate) {
+    high1 = 1;
+    val1 = 0;
+  }
+  else if(loc2 == lortcdate) {
+    high2 = 1;
+    val2 = 0;
+  }
+  else if(loc3 == lortcdate) {
+    high3 = 1;
+    val3 = 0;
+  }
+}
 
 //펌프모터
 void waterpump() {
@@ -201,6 +241,29 @@ void dhts() {
 }
 
 void lcds() {
-
-  
+  lcd.setCursor(0,0); //hum
+  lcd.print("humidity");
+  lcd.setCursor(0,1); //line 2
+  lcd.print(hum);
+  delay(1000);
+  lcd.setCursor(0,0); //temp
+  lcd.print("TEMP");
+  lcd.setCursor(0,1); //line 2
+  lcd.print(temp);
+  delay(1000);  
+  lcd.setCursor(0,0); //soil1
+  lcd.print("soil1");
+  lcd.setCursor(0,1); //line 2
+  lcd.print(soilval1);
+  delay(1000);
+  lcd.setCursor(0,0); //soil2
+  lcd.print("soil2");
+  lcd.setCursor(0,1); //line 2
+  lcd.print(soilval2);
+  delay(1000);
+  lcd.setCursor(0,0); //soil3
+  lcd.print("soil3");
+  lcd.setCursor(0,1); //line 2
+  lcd.print(soilval3);
+  delay(1000);
 }
