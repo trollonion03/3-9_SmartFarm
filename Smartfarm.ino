@@ -117,7 +117,6 @@ void loop() {
   calucatedate(); 
 }
 
-//네트워크
 
 //RTC
 void lortcs() {
@@ -226,7 +225,7 @@ void calucatedate() {
   }*/
 }
 
-//펌프모터
+//Motor
 void waterpump() {
   if(high1 == 1) {
     digitalWrite(3, LOW);
