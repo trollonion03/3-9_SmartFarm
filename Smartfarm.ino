@@ -9,8 +9,8 @@
  * etc - D10,11,12                                                 *
  *******************************************************************/
 #include <DHT.h>//D3
-#include <SPI.h>
 #include <WiFiNINA.h>
+#include <SPI.h>
 #include <Wire.h>
 #include <WiFiUdp.h>
 #include <LiquidCrystal_I2C.h>
@@ -152,6 +152,7 @@ void printDateTime(const RtcDateTime& dt)
   lortchour = dt.Hour();
   lortcmin = dt.Minute();
   lortcsec = dt.Second();
+  
 }
 
 void calucatedate() {
@@ -179,15 +180,24 @@ void calucatedate() {
   }
 
   if(loc1 == lortcdate) {
-    high1 = 1;
+    digitalWrite(3, LOW);
+    analogWrite(4, HIGH);
+    delay(3000);
+    analogWrite(4, LOW);
     val1 = 0;
   }
   else if(loc2 == lortcdate) {
-    high2 = 1;
+    digitalWrite(3, LOW);
+    analogWrite(5, HIGH);
+    delay(3000);
+    analogWrite(5, LOW);
     val2 = 0;
   }
   else if(loc3 == lortcdate) {
-    high3 = 1;
+    digitalWrite(3, LOW);
+    analogWrite(6, HIGH);
+    delay(3000);
+    analogWrite(6, LOW);
     val3 = 0;
   }
 }
@@ -195,22 +205,16 @@ void calucatedate() {
 //펌프모터
 void waterpump() {
   if(high1 == 1) {
-    digitalWrite(3, HIGH);
-    analogWrite(4, 255);
-    delay(3000);
-    analogWrite(4, 0); 
+    digitalWrite(3, LOW);
+    digitalWrite(4, HIGH); 
   }
   else if(high2 == 1) {
-    digitalWrite(3, HIGH);
-    analogWrite(5, 255);
-    delay(3000);
-    analogWrite(5, 0);
+    digitalWrite(3, LOW);
+    digitalWrite(5, HIGH);
   }
   else if(high3 == 1) {
-    digitalWrite(3, HIGH);
-    analogWrite(6, 255);
-    delay(3000);
-    analogWrite(6, 0);
+    digitalWrite(3, LOW);
+    digitalWrite(6, HIGH);
   }
 }
 
@@ -219,13 +223,13 @@ void soil() {
   soilval2 = analogRead(A1Pin);
   soilval3 = analogRead(A2Pin);
 
-  if(soilval1 > 900) {
+  if(soilval1 > 800) {
     high1 = 1;
   }
-  else if(soilval2 > 900) {
+  else if(soilval2 > 800) {
     high2 = 1;
   }
-  else if(soilval3 > 900) {
+  else if(soilval3 > 800) {
     high3 = 1;
   }
   else {
@@ -241,26 +245,31 @@ void dhts() {
 }
 
 void lcds() {
+  lcd.init();
   lcd.setCursor(0,0); //hum
   lcd.print("humidity");
   lcd.setCursor(0,1); //line 2
   lcd.print(hum);
   delay(1000);
+  lcd.init();
   lcd.setCursor(0,0); //temp
   lcd.print("TEMP");
   lcd.setCursor(0,1); //line 2
   lcd.print(temp);
-  delay(1000);  
+  delay(1000);
+  lcd.init();  
   lcd.setCursor(0,0); //soil1
   lcd.print("soil1");
   lcd.setCursor(0,1); //line 2
   lcd.print(soilval1);
   delay(1000);
+  lcd.init();
   lcd.setCursor(0,0); //soil2
   lcd.print("soil2");
   lcd.setCursor(0,1); //line 2
   lcd.print(soilval2);
   delay(1000);
+  lcd.init();
   lcd.setCursor(0,0); //soil3
   lcd.print("soil3");
   lcd.setCursor(0,1); //line 2
