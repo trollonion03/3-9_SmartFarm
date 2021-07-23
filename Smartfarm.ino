@@ -156,7 +156,8 @@ void printDateTime(const RtcDateTime& dt)
 }
 
 void calucatedate() {
-  int loc1 = 0;
+  //Method_1(unstable, choose one of them)
+  /*int loc1 = 0;
   int locc1 = 0;
   int loc2 = 0;
   int locc2 = 0;
@@ -198,8 +199,31 @@ void calucatedate() {
     analogWrite(6, HIGH);
     delay(3000);
     analogWrite(6, LOW);
-    val3 = 0;
+  } */
+
+  //Method_2(recommended method)
+  if(lortcdate%4 == 0 && lortchour == 15 && lortcmin == 11) {
+    digitalWrite(3, LOW);
+    analogWrite(4, HIGH);
+    analogWrite(5, HIGH);
+    analogWrite(6, HIGH);
+    delay(9000);
+    analogWrite(4, LOW);
+    analogWrite(5, LOW);
+    analogWrite(6, LOW);
   }
+
+  //Method_3(It is just a joke)
+  /*if(lortcdate == 4) {
+    digitalWrite(3, LOW);
+    analogWrite(4, HIGH);
+    analogWrite(5, HIGH);
+    analogWrite(6, HIGH);
+    delay(9000);
+    analogWrite(4, LOW);
+    analogWrite(5, LOW);
+    analogWrite(6, LOW);
+  }*/
 }
 
 //펌프모터
