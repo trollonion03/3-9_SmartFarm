@@ -213,7 +213,7 @@ void calucatedate() {
     analogWrite(6, LOW);
   }
 
-  //Method_3(It is just a joke)
+  //Method_3(It is just a joke. If you're going to use this seriously, see a doctor : not in hospital, in lab or academy for yor mind.)
   /*if(lortcdate == 4) {
     digitalWrite(3, LOW);
     analogWrite(4, HIGH);
