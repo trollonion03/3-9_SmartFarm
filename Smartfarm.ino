@@ -1,3 +1,4 @@
+
 /********************Eunhasu smartfarm(v1.1)************************
  * Programmed by Trollonion03(https://github.com/trollonion03)     *
  * based on Arduino UNO wifi rev2                                  *
@@ -8,8 +9,9 @@
  * OLED/LCD - A4,5                                                 *
  * etc - D10,11,12                                                 *
  *******************************************************************/
-#include <DHT.h>//D3
-#include <WiFiNINA.h>
+#include <DHT.h>
+#include <Firebase_Arduino_WiFiNINA.h>
+#include "fbse1.h"
 #include <SPI.h>
 #include <Wire.h>
 #include <WiFiUdp.h>
@@ -19,12 +21,12 @@
 
 
 //network setup
-/*
-int status = WL_IDLE_STATUS;
-char ssid[] = "test";
-char pass[] = "test";
-int keyIndex = 0; 
-*/
+#define FIREBASE_HOST FIREBASE_PROJECT_SECRET
+#define FIREBASE_AUTH FIREBASE_DATABASE_SECRET
+#define WIFI_SSID SECRET_SSID
+#define WIFI_PASSWORD SECRET_PASS
+
+FirebaseData firebaseData;
 
 //var
 int high1 = 0;
@@ -37,11 +39,12 @@ int lortcdate = 0;
 int lortchour = 0;
 int lortcmin = 0;
 int lortcsec = 0;
-float hum = 0;
-float temp = 0;
 int date1 = 0;
 int date2 = 0;
 int date3 = 0;
+float hum;
+float temp;
+String path = "/trollonionfarm";
 
 //rtc
 ThreeWire myWire(7,8,9); // IO, SCLK, CE
@@ -68,8 +71,21 @@ void setup() {
   pinMode(5, OUTPUT);
   pinMode(6, OUTPUT);
   
-  //netowork setup
-  
+  //Netowork setup
+  int status = WL_IDLE_STATUS;
+  while (status != WL_CONNECTED){
+    status = WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print(".");
+    delay(300);
+  }
+  Serial.println();
+  Serial.print("Connected with IP: ");
+  Serial.println(WiFi.localIP());
+  Serial.println();
+
+  Firebase.begin(FIREBASE_HOST, FIREBASE_AUTH, WIFI_SSID, WIFI_PASSWORD);
+  Firebase.reconnectWiFi(true);
+
  
   //LCD
   lcd.init();
@@ -109,10 +125,12 @@ void setup() {
 }
 
 void loop() {
+  Serial.println(dht.readHumidity());
+  Serial.println(dht.readTemperature());
   waterpump();
+  fbase();
   soil();
   lcds();
-  dhts();
   lortcs();
   calucatedate(); 
 }
@@ -262,12 +280,12 @@ void soil() {
   }
 }
 
-void dhts() {
-  hum = dht.readHumidity();
-  temp = dht.readTemperature();
-}
 
 void lcds() {
+  hum = dht.readHumidity();
+  delay(10);
+  temp = dht.readTemperature();
+  
   lcd.init();
   lcd.setCursor(0,0); //hum
   lcd.print("humidity");
@@ -297,5 +315,52 @@ void lcds() {
   lcd.print("soil3");
   lcd.setCursor(0,1); //line 2
   lcd.print(soilval3);
-  delay(1000);
+  delay(2000);
+}
+
+void fbase() {
+  if (Firebase.setFloat(firebaseData, path + "/Hum",hum)) {
+    Serial.println("humidity OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "float")
+      Serial.println(firebaseData.floatData());
+  }
+  if (Firebase.setFloat(firebaseData, path + "/Temp",temp)) {
+    Serial.println("TEMP OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "float")
+      Serial.println(firebaseData.floatData());
+  }
+  if (Firebase.setInt(firebaseData, path + "/Soil1",soilval1)) {
+    Serial.println("soil1 OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "int")
+      Serial.println(firebaseData.intData());
+  }
+  if (Firebase.setInt(firebaseData, path + "/Soil2",soilval2)) {
+    Serial.println("soil2 OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "int")
+      Serial.println(firebaseData.intData());
+  }
+  if (Firebase.setInt(firebaseData, path + "/Soil3",soilval3)) {
+    Serial.println("soil3 OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "int")
+      Serial.println(firebaseData.intData());
+  }
+  else {
+    Serial.println();
+    Serial.println("FAIL: " + firebaseData.errorReason());
+  }
 }
