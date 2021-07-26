@@ -39,6 +39,8 @@ int lortcdate = 0;
 int lortchour = 0;
 int lortcmin = 0;
 int lortcsec = 0;
+int lortcyear = 0;
+int lortcmonth = 0;
 int date1 = 0;
 int date2 = 0;
 int date3 = 0;
@@ -169,7 +171,8 @@ void printDateTime(const RtcDateTime& dt)
   lortchour = dt.Hour();
   lortcmin = dt.Minute();
   lortcsec = dt.Second();
-  
+  lortcyear = dt.Year();
+  lortcmonth = dt.Month();
 }
 
 void calucatedate() {
@@ -359,8 +362,17 @@ void fbase() {
     if (firebaseData.dataType() == "int")
       Serial.println(firebaseData.intData());
   }
+  if (Firebase.setInt(firebaseData, path + "/mars/" + lortcyear + "-" + lortcmonth + "-" + lortcdate + "_KST", soilval2)) {
+    Serial.println("soil2 record OK");
+    Serial.println("PATH: " + firebaseData.dataPath());
+    Serial.println("TYPE: " + firebaseData.dataType());
+    Serial.print("VALUE: ");
+    if (firebaseData.dataType() == "int")
+      Serial.println(firebaseData.intData());
+  }
   else {
     Serial.println();
     Serial.println("FAIL: " + firebaseData.errorReason());
   }
+  
 }
