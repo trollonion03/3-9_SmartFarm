@@ -3,5 +3,3 @@
 2021 3-9 Smart-classroom project
 
 This code working on Arduino uno wifi rev.2
-
-If you want run this code on original Arduion uno, Just delete firebase function code
